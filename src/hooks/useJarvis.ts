@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useVoiceRecognition } from './useVoiceRecognition';
 import { Message } from '@/components/jarvis/ConversationLog';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type JarvisStatus = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -25,37 +26,73 @@ export const useJarvis = () => {
     addMessage('user', userInput);
 
     try {
-      // For now, simulate AI processing with a simple response
-      // TODO: Replace with actual AI processing via Supabase Edge Function
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const responses = [
-        "I'm processing your request, sir.",
-        "Understood. How may I assist you further?",
-        "I'm here to help with whatever you need.",
-        "Your request has been noted. What else can I do for you?",
-        "I'm analyzing the situation and will provide an update shortly."
-      ];
-      
-      const response = responses[Math.floor(Math.random() * responses.length)];
-      addMessage('assistant', response);
+      // Send message to n8n webhook for AI processing
+      const { data: aiData, error: aiError } = await supabase.functions.invoke('n8n-webhook', {
+        body: {
+          message: userInput,
+          conversationHistory: messages.slice(-5) // Send last 5 messages for context
+        }
+      });
+
+      if (aiError) {
+        throw new Error(`AI processing failed: ${aiError.message}`);
+      }
+
+      const aiResponse = aiData?.response || "I'm here to assist you, sir.";
+      addMessage('assistant', aiResponse);
       
       setStatus('speaking');
       
-      // TODO: Replace with actual TTS using ElevenLabs API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Generate speech using ElevenLabs TTS
+      const { data: ttsData, error: ttsError } = await supabase.functions.invoke('elevenlabs-tts', {
+        body: {
+          text: aiResponse,
+          voiceId: "9BWtsMINqrJLrRacOk9x" // Aria voice
+        }
+      });
+
+      if (ttsError) {
+        console.error('TTS error:', ttsError);
+        // Continue without audio if TTS fails
+        setStatus('idle');
+        return;
+      }
+
+      // Play the generated audio
+      if (ttsData?.audioContent) {
+        const audioBlob = new Blob([
+          Uint8Array.from(atob(ttsData.audioContent), c => c.charCodeAt(0))
+        ], { type: 'audio/mpeg' });
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          setStatus('idle');
+        };
+        
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          URL.revokeObjectURL(audioUrl);
+          setStatus('idle');
+        };
+        
+        await audio.play();
+      } else {
+        setStatus('idle');
+      }
       
-      setStatus('idle');
     } catch (error) {
       console.error('Error processing message:', error);
       toast({
         title: "Processing Error",
-        description: "Failed to process your request. Please try again.",
+        description: error.message || "Failed to process your request. Please try again.",
         variant: "destructive",
       });
       setStatus('idle');
     }
-  }, [addMessage, toast]);
+  }, [addMessage, toast, messages]);
 
   const handleTranscript = useCallback((transcript: string) => {
     console.log('Received transcript:', transcript);
