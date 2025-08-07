@@ -61,6 +61,15 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// JARVIS Theme Colors
+				jarvis: {
+					glow: 'hsl(var(--jarvis-glow))',
+					'glow-soft': 'hsl(var(--jarvis-glow-soft))',
+					surface: 'hsl(var(--jarvis-surface))',
+					'surface-elevated': 'hsl(var(--jarvis-surface-elevated))',
+					'text-primary': 'hsl(var(--jarvis-text-primary))',
+					'text-secondary': 'hsl(var(--jarvis-text-secondary))'
 				}
 			},
 			borderRadius: {

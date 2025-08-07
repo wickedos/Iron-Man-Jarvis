@@ -8,35 +8,58 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* JARVIS Dark Theme */
+    --background: 220 27% 4%;
+    --foreground: 195 100% 95%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 220 27% 6%;
+    --card-foreground: 195 100% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 220 27% 8%;
+    --popover-foreground: 195 100% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 220 27% 4%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 27% 12%;
+    --secondary-foreground: 195 100% 90%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 27% 8%;
+    --muted-foreground: 195 20% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 195 100% 40%;
+    --accent-foreground: 195 100% 95%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 195 100% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 220 27% 15%;
+    --input: 220 27% 10%;
+    --ring: 195 100% 50%;
 
-    --radius: 0.5rem;
+    /* JARVIS Design Tokens */
+    --jarvis-glow: 195 100% 50%;
+    --jarvis-glow-soft: 195 100% 40%;
+    --jarvis-surface: 220 27% 8%;
+    --jarvis-surface-elevated: 220 27% 12%;
+    --jarvis-text-primary: 195 100% 95%;
+    --jarvis-text-secondary: 195 40% 75%;
+    
+    /* Gradients */
+    --gradient-jarvis: linear-gradient(135deg, hsl(195 100% 50%) 0%, hsl(200 100% 40%) 100%);
+    --gradient-jarvis-subtle: linear-gradient(180deg, hsl(220 27% 8%) 0%, hsl(220 27% 4%) 100%);
+    --gradient-glow: radial-gradient(circle, hsl(195 100% 50% / 0.3) 0%, transparent 70%);
+    
+    /* Shadows */
+    --shadow-jarvis: 0 0 20px hsl(195 100% 50% / 0.3);
+    --shadow-jarvis-strong: 0 0 40px hsl(195 100% 50% / 0.5);
+    --shadow-elevated: 0 8px 32px hsl(220 27% 4% / 0.6);
+    
+    /* Animations */
+    --transition-jarvis: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --pulse-duration: 2s;
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +123,79 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-mono;
+    background: var(--gradient-jarvis-subtle);
+    overflow-x: hidden;
+  }
+  
+  /* JARVIS UI Components */
+  .jarvis-glow {
+    box-shadow: var(--shadow-jarvis);
+  }
+  
+  .jarvis-glow-strong {
+    box-shadow: var(--shadow-jarvis-strong);
+  }
+  
+  .jarvis-pulse {
+    animation: jarvis-pulse var(--pulse-duration) ease-in-out infinite;
+  }
+  
+  .jarvis-transition {
+    transition: var(--transition-jarvis);
+  }
+  
+  .jarvis-surface {
+    background: hsl(var(--jarvis-surface));
+    border: 1px solid hsl(var(--border));
+  }
+  
+  .jarvis-surface-elevated {
+    background: hsl(var(--jarvis-surface-elevated));
+    box-shadow: var(--shadow-elevated);
+  }
+}
+
+@layer components {
+  /* Voice Waveform Animation */
+  .voice-wave {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .voice-wave-bar {
+    width: 4px;
+    background: var(--gradient-jarvis);
+    border-radius: 2px;
+    animation: voice-wave 1.5s ease-in-out infinite;
+  }
+  
+  .voice-wave-bar:nth-child(1) { animation-delay: 0ms; height: 20px; }
+  .voice-wave-bar:nth-child(2) { animation-delay: 100ms; height: 30px; }
+  .voice-wave-bar:nth-child(3) { animation-delay: 200ms; height: 40px; }
+  .voice-wave-bar:nth-child(4) { animation-delay: 300ms; height: 30px; }
+  .voice-wave-bar:nth-child(5) { animation-delay: 400ms; height: 20px; }
+}
+
+@keyframes jarvis-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes voice-wave {
+  0%, 100% {
+    transform: scaleY(0.3);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
   }
 }
