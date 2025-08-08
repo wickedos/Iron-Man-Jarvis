@@ -7,6 +7,7 @@ import { ConversationLog } from "./ConversationLog";
 import { useJarvis } from "@/hooks/useJarvis";
 import { Settings, Trash2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SettingsModal } from "./SettingsModal";
 
 export const JarvisInterface = () => {
   const { 
@@ -56,13 +57,7 @@ export const JarvisInterface = () => {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="jarvis-surface"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
+            <SettingsModal />
           </div>
         </div>
       </div>
