@@ -20,12 +20,31 @@ export const JarvisInterface = () => {
 
   if (!isSupported) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <Alert className="max-w-md">
+      <div className="min-h-screen p-6 flex flex-col items-center justify-center">
+        {/* Header */}
+        <div className="w-full max-w-4xl mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                JARVIS
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Just A Rather Very Intelligent System
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <SettingsModal />
+            </div>
+          </div>
+        </div>
+
+        <Alert className="max-w-md mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Speech recognition is not supported in this browser. 
             Please use Chrome, Edge, or Safari for the best experience.
+            You can still update settings using the gear icon above.
           </AlertDescription>
         </Alert>
       </div>

@@ -10,7 +10,18 @@ export const useVoiceRecognition = ({ onTranscript, onError }: UseVoiceRecogniti
   const [isSupported, setIsSupported] = useState(() => {
     // Check support immediately on initialization
     if (typeof window === 'undefined') return false;
-    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    
+    // More robust browser detection
+    const hasWebkit = 'webkitSpeechRecognition' in window;
+    const hasNative = 'SpeechRecognition' in window;
+    
+    console.log('Speech Recognition Support Check:', {
+      hasWebkit,
+      hasNative,
+      userAgent: navigator.userAgent
+    });
+    
+    return hasWebkit || hasNative;
   });
   const recognitionRef = useRef<any>(null);
 
