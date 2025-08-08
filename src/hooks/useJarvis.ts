@@ -26,11 +26,15 @@ export const useJarvis = () => {
     addMessage('user', userInput);
 
     try {
+      // Get user's custom webhook URL from localStorage
+      const customWebhookUrl = localStorage.getItem('jarvis_webhook_url');
+      
       // Send message to n8n webhook for AI processing
       const { data: aiData, error: aiError } = await supabase.functions.invoke('n8n-webhook', {
         body: {
           message: userInput,
-          conversationHistory: messages.slice(-5) // Send last 5 messages for context
+          conversationHistory: messages.slice(-5), // Send last 5 messages for context
+          webhookUrl: customWebhookUrl // Pass custom webhook URL
         }
       });
 

@@ -12,15 +12,16 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory = [] } = await req.json();
+    // Get webhook URL from request body (user-provided) or fallback to environment
+    const { message, conversationHistory = [], webhookUrl: userWebhookUrl } = await req.json();
 
     if (!message) {
       throw new Error('Message is required');
     }
-
-    const webhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
+    
+    const webhookUrl = userWebhookUrl || Deno.env.get('N8N_WEBHOOK_URL');
     if (!webhookUrl) {
-      throw new Error('n8n webhook URL not configured');
+      throw new Error('n8n webhook URL not provided');
     }
 
     console.log('Sending message to n8n webhook:', message);

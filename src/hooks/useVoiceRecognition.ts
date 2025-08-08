@@ -7,7 +7,11 @@ interface UseVoiceRecognitionOptions {
 
 export const useVoiceRecognition = ({ onTranscript, onError }: UseVoiceRecognitionOptions) => {
   const [isListening, setIsListening] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported, setIsSupported] = useState(() => {
+    // Check support immediately on initialization
+    if (typeof window === 'undefined') return false;
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  });
   const recognitionRef = useRef<any>(null);
 
   const initializeRecognition = useCallback(() => {

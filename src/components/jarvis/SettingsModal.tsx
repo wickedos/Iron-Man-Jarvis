@@ -25,39 +25,19 @@ export const SettingsModal = () => {
 
     setIsLoading(true);
     try {
-      // Test the webhook URL first
-      const testPayload = {
-        message: "Test connection from JARVIS",
-        timestamp: new Date().toISOString(),
-        source: 'jarvis-settings-test'
-      };
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testPayload),
+      // Store webhook URL in localStorage for immediate use
+      localStorage.setItem('jarvis_webhook_url', webhookUrl);
+      
+      toast({
+        title: "Success",
+        description: "Webhook URL updated successfully! JARVIS will now use your new webhook.",
       });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Webhook URL updated and tested successfully!",
-        });
-        setIsOpen(false);
-        setWebhookUrl('');
-      } else {
-        toast({
-          title: "Warning",
-          description: "Webhook URL saved but test failed. Please verify the URL is correct.",
-          variant: "destructive",
-        });
-      }
+      setIsOpen(false);
+      setWebhookUrl('');
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to test webhook URL. Please check the URL and try again.",
+        description: "Failed to save webhook URL. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -97,7 +77,7 @@ export const SettingsModal = () => {
             Cancel
           </Button>
           <Button onClick={handleSaveWebhook} disabled={isLoading}>
-            {isLoading ? 'Testing...' : 'Save & Test'}
+            {isLoading ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </DialogContent>
