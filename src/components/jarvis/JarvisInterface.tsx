@@ -5,6 +5,7 @@ import { JarvisStatus } from "./JarvisStatus";
 import { VoiceVisualizer } from "./VoiceVisualizer";
 import { ConversationLog } from "./ConversationLog";
 import { TextInput } from "./TextInput";
+import { ConversationControls } from "./ConversationControls";
 import { useJarvis } from "@/hooks/useJarvis";
 import { Settings, Trash2, AlertCircle, Keyboard, Mic } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,9 +17,15 @@ export const JarvisInterface = () => {
     status, 
     messages, 
     isSupported, 
+    conversationMode,
+    isConversationActive,
     handleMicrophoneClick, 
     handleTextMessage,
-    clearConversation 
+    clearConversation,
+    toggleConversationMode,
+    startConversation,
+    stopConversation,
+    interruptAI
   } = useJarvis();
   const [inputMode, setInputMode] = useState<'voice' | 'text'>(isSupported ? 'voice' : 'text');
 
@@ -130,6 +137,19 @@ export const JarvisInterface = () => {
 
           {inputMode === 'voice' ? (
             <>
+              {/* Conversation Controls */}
+              <Card className="w-full p-4 jarvis-surface border-border/50">
+                <ConversationControls
+                  conversationMode={conversationMode}
+                  isConversationActive={isConversationActive}
+                  status={status}
+                  onToggleMode={toggleConversationMode}
+                  onStartConversation={startConversation}
+                  onStopConversation={stopConversation}
+                  onInterrupt={interruptAI}
+                />
+              </Card>
+
               {/* Voice Visualizer */}
               <Card className="w-full p-6 jarvis-surface-elevated border-border/50">
                 <div className="text-center mb-4">
@@ -144,18 +164,38 @@ export const JarvisInterface = () => {
 
               {/* Main Control Button */}
               <div className="flex flex-col items-center gap-4">
-                <JarvisButton
-                  isListening={status === 'listening'}
-                  isProcessing={status === 'processing' || status === 'speaking'}
-                  onClick={handleMicrophoneClick}
-                />
+                {conversationMode === 'single' ? (
+                  <JarvisButton
+                    isListening={status === 'listening'}
+                    isProcessing={status === 'processing' || status === 'speaking'}
+                    onClick={handleMicrophoneClick}
+                  />
+                ) : (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Use conversation controls above to manage continuous chat
+                    </p>
+                  </div>
+                )}
                 
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">
-                    {status === 'idle' && 'Click to start listening'}
-                    {status === 'listening' && 'Listening to your voice...'}
-                    {status === 'processing' && 'Processing your request...'}
-                    {status === 'speaking' && 'JARVIS is responding...'}
+                    {conversationMode === 'continuous' && isConversationActive && (
+                      <>
+                        {status === 'idle' && '🎤 Ready to listen...'}
+                        {status === 'listening' && '👂 Listening to your voice...'}
+                        {status === 'processing' && '🧠 Processing your request...'}
+                        {status === 'speaking' && '🗣️ JARVIS is responding...'}
+                      </>
+                    )}
+                    {conversationMode === 'single' && (
+                      <>
+                        {status === 'idle' && 'Click to start listening'}
+                        {status === 'listening' && 'Listening to your voice...'}
+                        {status === 'processing' && 'Processing your request...'}
+                        {status === 'speaking' && 'JARVIS is responding...'}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>

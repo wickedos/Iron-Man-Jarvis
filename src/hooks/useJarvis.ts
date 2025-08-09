@@ -1,14 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useVoiceRecognition } from './useVoiceRecognition';
 import { Message } from '@/components/jarvis/ConversationLog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 type JarvisStatus = 'idle' | 'listening' | 'processing' | 'speaking';
+type ConversationMode = 'single' | 'continuous';
 
 export const useJarvis = () => {
   const [status, setStatus] = useState<JarvisStatus>('idle');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationMode, setConversationMode] = useState<ConversationMode>('single');
+  const [isConversationActive, setIsConversationActive] = useState(false);
+  const autoListenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
   const addMessage = useCallback((type: 'user' | 'assistant', content: string) => {
@@ -92,10 +97,25 @@ export const useJarvis = () => {
           const audioUrl = URL.createObjectURL(audioBlob);
           const audio = new Audio(audioUrl);
           
+          currentAudioRef.current = audio;
+          
           audio.onended = () => {
             console.log('✅ Audio playback completed');
             URL.revokeObjectURL(audioUrl);
-            setStatus('idle');
+            currentAudioRef.current = null;
+            
+            // Auto-continue conversation if in continuous mode
+            if (conversationMode === 'continuous' && isConversationActive) {
+              console.log('🔄 Auto-starting listening for continuous conversation...');
+              autoListenTimeoutRef.current = setTimeout(() => {
+                if (isConversationActive && !isListening) {
+                  setStatus('listening');
+                  startListening();
+                }
+              }, 1000); // 1 second delay before auto-listening
+            } else {
+              setStatus('idle');
+            }
           };
           
           audio.onerror = (error) => {
@@ -143,7 +163,7 @@ export const useJarvis = () => {
       });
       setStatus('idle');
     }
-  }, [addMessage, toast, messages]);
+  }, [addMessage, toast, messages, conversationMode, isConversationActive]);
 
   const handleTranscript = useCallback((transcript: string) => {
     console.log('🎤 Received transcript:', transcript);
@@ -200,6 +220,15 @@ export const useJarvis = () => {
 
   const clearConversation = useCallback(() => {
     setMessages([]);
+    setIsConversationActive(false);
+    if (autoListenTimeoutRef.current) {
+      clearTimeout(autoListenTimeoutRef.current);
+      autoListenTimeoutRef.current = null;
+    }
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
     if (isListening) {
       stopListening();
       setStatus('idle');
@@ -211,12 +240,80 @@ export const useJarvis = () => {
     processMessage(message);
   }, [processMessage]);
 
+  const toggleConversationMode = useCallback(() => {
+    const newMode = conversationMode === 'single' ? 'continuous' : 'single';
+    setConversationMode(newMode);
+    console.log('🔄 Conversation mode changed to:', newMode);
+    
+    if (newMode === 'single') {
+      setIsConversationActive(false);
+      if (autoListenTimeoutRef.current) {
+        clearTimeout(autoListenTimeoutRef.current);
+        autoListenTimeoutRef.current = null;
+      }
+    }
+  }, [conversationMode]);
+
+  const startConversation = useCallback(() => {
+    if (conversationMode === 'continuous') {
+      console.log('🚀 Starting continuous conversation...');
+      setIsConversationActive(true);
+      if (!isListening && status === 'idle') {
+        setStatus('listening');
+        startListening();
+      }
+    } else {
+      handleMicrophoneClick();
+    }
+  }, [conversationMode, isListening, status, startListening, handleMicrophoneClick]);
+
+  const stopConversation = useCallback(() => {
+    console.log('🛑 Stopping conversation...');
+    setIsConversationActive(false);
+    if (autoListenTimeoutRef.current) {
+      clearTimeout(autoListenTimeoutRef.current);
+      autoListenTimeoutRef.current = null;
+    }
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (isListening) {
+      stopListening();
+    }
+    setStatus('idle');
+  }, [isListening, stopListening]);
+
+  const interruptAI = useCallback(() => {
+    console.log('⚠️ User interrupting AI...');
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (autoListenTimeoutRef.current) {
+      clearTimeout(autoListenTimeoutRef.current);
+      autoListenTimeoutRef.current = null;
+    }
+    if (conversationMode === 'continuous' && isConversationActive) {
+      setStatus('listening');
+      startListening();
+    } else {
+      setStatus('idle');
+    }
+  }, [conversationMode, isConversationActive, startListening]);
+
   return {
     status: isListening ? 'listening' : status,
     messages,
     isSupported,
+    conversationMode,
+    isConversationActive,
     handleMicrophoneClick,
     handleTextMessage,
-    clearConversation
+    clearConversation,
+    toggleConversationMode,
+    startConversation,
+    stopConversation,
+    interruptAI
   };
 };
