@@ -74,3 +74,6 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-trick
 
 <img width="754" height="398" alt="image" src="https://github.com/user-attachments/assets/66800638-c154-4081-a460-3fe4985a9842" />
 
+<img width="1191" height="682" alt="image" src="https://github.com/user-attachments/assets/e1e578d7-45d1-4c2a-9b8a-e43f9a08f802" />
+
+
