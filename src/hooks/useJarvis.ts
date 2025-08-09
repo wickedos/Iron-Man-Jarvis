@@ -22,13 +22,21 @@ export const useJarvis = () => {
   }, []);
 
   const processMessage = useCallback(async (userInput: string) => {
+    console.log('🤖 JARVIS: Processing message:', userInput);
     setStatus('processing');
     addMessage('user', userInput);
 
     try {
-      // Get user's custom webhook URL from localStorage
-      const customWebhookUrl = localStorage.getItem('jarvis_webhook_url');
+      // Get user's custom webhook URL from localStorage with validation
+      let customWebhookUrl;
+      try {
+        customWebhookUrl = localStorage.getItem('jarvis_webhook_url');
+        console.log('🔗 Custom webhook URL:', customWebhookUrl ? 'Found' : 'Not set');
+      } catch (storageError) {
+        console.warn('⚠️ localStorage access failed:', storageError);
+      }
       
+      console.log('🚀 Calling n8n-webhook...');
       // Send message to n8n webhook for AI processing
       const { data: aiData, error: aiError } = await supabase.functions.invoke('n8n-webhook', {
         body: {
@@ -38,15 +46,19 @@ export const useJarvis = () => {
         }
       });
 
+      console.log('📡 n8n-webhook response:', { aiData, aiError });
+
       if (aiError) {
         throw new Error(`AI processing failed: ${aiError.message}`);
       }
 
       const aiResponse = aiData?.response || "I'm here to assist you, sir.";
+      console.log('🤖 AI Response:', aiResponse);
       addMessage('assistant', aiResponse);
       
       setStatus('speaking');
       
+      console.log('🎵 Generating TTS...');
       // Generate speech using ElevenLabs TTS
       const { data: ttsData, error: ttsError } = await supabase.functions.invoke('elevenlabs-tts', {
         body: {
@@ -55,40 +67,75 @@ export const useJarvis = () => {
         }
       });
 
+      console.log('🔊 TTS response:', { ttsData: !!ttsData, ttsError });
+
       if (ttsError) {
-        console.error('TTS error:', ttsError);
+        console.error('❌ TTS error:', ttsError);
         // Continue without audio if TTS fails
+        toast({
+          title: "Audio Error",
+          description: "Failed to generate speech, but continuing in text mode.",
+          variant: "destructive",
+        });
         setStatus('idle');
         return;
       }
 
       // Play the generated audio
       if (ttsData?.audioContent) {
-        const audioBlob = new Blob([
-          Uint8Array.from(atob(ttsData.audioContent), c => c.charCodeAt(0))
-        ], { type: 'audio/mpeg' });
-        
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
+        console.log('🎤 Playing audio...');
+        try {
+          const audioBlob = new Blob([
+            Uint8Array.from(atob(ttsData.audioContent), c => c.charCodeAt(0))
+          ], { type: 'audio/mpeg' });
+          
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          
+          audio.onended = () => {
+            console.log('✅ Audio playback completed');
+            URL.revokeObjectURL(audioUrl);
+            setStatus('idle');
+          };
+          
+          audio.onerror = (error) => {
+            console.error('❌ Audio playback error:', error);
+            URL.revokeObjectURL(audioUrl);
+            setStatus('idle');
+            toast({
+              title: "Audio Playback Error",
+              description: "Failed to play audio response.",
+              variant: "destructive",
+            });
+          };
+          
+          audio.onloadstart = () => {
+            console.log('🔄 Audio loading started...');
+          };
+          
+          audio.oncanplay = () => {
+            console.log('▶️ Audio ready to play');
+          };
+          
+          await audio.play();
+          console.log('🎵 Audio started playing');
+          
+        } catch (audioError) {
+          console.error('❌ Audio creation/playback failed:', audioError);
           setStatus('idle');
-        };
-        
-        audio.onerror = (error) => {
-          console.error('Audio playback error:', error);
-          URL.revokeObjectURL(audioUrl);
-          setStatus('idle');
-        };
-        
-        await audio.play();
+          toast({
+            title: "Audio Error",
+            description: "Failed to create or play audio.",
+            variant: "destructive",
+          });
+        }
       } else {
+        console.log('⚠️ No audio content received');
         setStatus('idle');
       }
       
     } catch (error) {
-      console.error('Error processing message:', error);
+      console.error('❌ Error processing message:', error);
       toast({
         title: "Processing Error",
         description: error.message || "Failed to process your request. Please try again.",
@@ -99,12 +146,16 @@ export const useJarvis = () => {
   }, [addMessage, toast, messages]);
 
   const handleTranscript = useCallback((transcript: string) => {
-    console.log('Received transcript:', transcript);
-    processMessage(transcript);
+    console.log('🎤 Received transcript:', transcript);
+    if (transcript.trim()) {
+      processMessage(transcript);
+    } else {
+      console.log('⚠️ Empty transcript received, ignoring');
+    }
   }, [processMessage]);
 
   const handleError = useCallback((error: string) => {
-    console.error('Voice recognition error:', error);
+    console.error('❌ Voice recognition error:', error);
     toast({
       title: "Voice Recognition Error",
       description: error,
@@ -119,18 +170,33 @@ export const useJarvis = () => {
   });
 
   const handleMicrophoneClick = useCallback(() => {
+    console.log('🎤 Microphone button clicked:', { status, isListening, isSupported });
+    
+    if (!isSupported) {
+      console.log('❌ Speech recognition not supported');
+      toast({
+        title: "Not Supported",
+        description: "Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (status === 'processing' || status === 'speaking') {
+      console.log('⚠️ System busy, ignoring microphone click');
       return;
     }
 
     if (isListening) {
+      console.log('🛑 Stopping listening...');
       stopListening();
       setStatus('idle');
     } else {
+      console.log('🎤 Starting listening...');
       setStatus('listening');
       startListening();
     }
-  }, [status, isListening, startListening, stopListening]);
+  }, [status, isListening, isSupported, startListening, stopListening, toast]);
 
   const clearConversation = useCallback(() => {
     setMessages([]);
@@ -140,11 +206,17 @@ export const useJarvis = () => {
     }
   }, [isListening, stopListening]);
 
+  const handleTextMessage = useCallback((message: string) => {
+    console.log('📝 Text message received:', message);
+    processMessage(message);
+  }, [processMessage]);
+
   return {
     status: isListening ? 'listening' : status,
     messages,
     isSupported,
     handleMicrophoneClick,
+    handleTextMessage,
     clearConversation
   };
 };

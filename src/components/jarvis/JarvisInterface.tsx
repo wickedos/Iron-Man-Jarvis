@@ -4,10 +4,12 @@ import { JarvisButton } from "./JarvisButton";
 import { JarvisStatus } from "./JarvisStatus";
 import { VoiceVisualizer } from "./VoiceVisualizer";
 import { ConversationLog } from "./ConversationLog";
+import { TextInput } from "./TextInput";
 import { useJarvis } from "@/hooks/useJarvis";
-import { Settings, Trash2, AlertCircle } from "lucide-react";
+import { Settings, Trash2, AlertCircle, Keyboard, Mic } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SettingsModal } from "./SettingsModal";
+import { useState } from "react";
 
 export const JarvisInterface = () => {
   const { 
@@ -15,8 +17,10 @@ export const JarvisInterface = () => {
     messages, 
     isSupported, 
     handleMicrophoneClick, 
+    handleTextMessage,
     clearConversation 
   } = useJarvis();
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>(isSupported ? 'voice' : 'text');
 
   if (!isSupported) {
     return (
@@ -43,10 +47,19 @@ export const JarvisInterface = () => {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Speech recognition is not supported in this browser. 
-            Please use Chrome, Edge, or Safari for the best experience.
-            You can still update settings using the gear icon above.
+            Please use Chrome, Edge, or Safari for voice interaction.
+            You can still chat with JARVIS using text input below.
           </AlertDescription>
         </Alert>
+
+        {/* Text input fallback for unsupported browsers */}
+        <div className="w-full max-w-md">
+          <ConversationLog messages={messages} className="mb-4" />
+          <TextInput
+            onSend={handleTextMessage}
+            isProcessing={status === 'processing'}
+          />
+        </div>
       </div>
     );
   }
@@ -88,37 +101,74 @@ export const JarvisInterface = () => {
           <ConversationLog messages={messages} />
         </Card>
 
-        {/* Voice Control Panel */}
+      {/* Input Control Panel */}
         <div className="w-80 flex flex-col items-center gap-6">
-          {/* Voice Visualizer */}
-          <Card className="w-full p-6 jarvis-surface-elevated border-border/50">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-semibold mb-2">Voice Activity</h3>
-              <VoiceVisualizer 
-                isListening={status === 'listening'} 
-                isSpeaking={status === 'speaking'}
-                className="h-16 justify-center"
-              />
+          {/* Input Mode Toggle */}
+          <Card className="w-full p-4 jarvis-surface border-border/50">
+            <div className="flex bg-muted/20 rounded-lg p-1">
+              <Button
+                variant={inputMode === 'voice' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setInputMode('voice')}
+                className="flex-1 flex items-center justify-center gap-2"
+                disabled={!isSupported}
+              >
+                <Mic className="w-4 h-4" />
+                Voice
+              </Button>
+              <Button
+                variant={inputMode === 'text' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setInputMode('text')}
+                className="flex-1 flex items-center justify-center gap-2"
+              >
+                <Keyboard className="w-4 h-4" />
+                Text
+              </Button>
             </div>
           </Card>
 
-          {/* Main Control Button */}
-          <div className="flex flex-col items-center gap-4">
-            <JarvisButton
-              isListening={status === 'listening'}
-              isProcessing={status === 'processing' || status === 'speaking'}
-              onClick={handleMicrophoneClick}
-            />
-            
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                {status === 'idle' && 'Click to start listening'}
-                {status === 'listening' && 'Listening to your voice...'}
-                {status === 'processing' && 'Processing your request...'}
-                {status === 'speaking' && 'JARVIS is responding...'}
-              </p>
-            </div>
-          </div>
+          {inputMode === 'voice' ? (
+            <>
+              {/* Voice Visualizer */}
+              <Card className="w-full p-6 jarvis-surface-elevated border-border/50">
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Voice Activity</h3>
+                  <VoiceVisualizer 
+                    isListening={status === 'listening'} 
+                    isSpeaking={status === 'speaking'}
+                    className="h-16 justify-center"
+                  />
+                </div>
+              </Card>
+
+              {/* Main Control Button */}
+              <div className="flex flex-col items-center gap-4">
+                <JarvisButton
+                  isListening={status === 'listening'}
+                  isProcessing={status === 'processing' || status === 'speaking'}
+                  onClick={handleMicrophoneClick}
+                />
+                
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {status === 'idle' && 'Click to start listening'}
+                    {status === 'listening' && 'Listening to your voice...'}
+                    {status === 'processing' && 'Processing your request...'}
+                    {status === 'speaking' && 'JARVIS is responding...'}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <Card className="w-full p-4 jarvis-surface border-border/50">
+              <h3 className="text-lg font-semibold mb-4 text-center">Text Input</h3>
+              <TextInput
+                onSend={handleTextMessage}
+                isProcessing={status === 'processing'}
+              />
+            </Card>
+          )}
 
           {/* System Info */}
           <Card className="w-full p-4 jarvis-surface border-border/50">
@@ -133,7 +183,13 @@ export const JarvisInterface = () => {
               </div>
               <div className="flex justify-between">
                 <span>Voice Support:</span>
-                <span className="text-green-400">Active</span>
+                <span className={isSupported ? "text-green-400" : "text-orange-400"}>
+                  {isSupported ? "Active" : "Unavailable"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Input Mode:</span>
+                <span className="text-foreground capitalize">{inputMode}</span>
               </div>
             </div>
           </Card>
